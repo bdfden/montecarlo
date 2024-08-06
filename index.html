@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Portfolio Simulation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+    }
+    #myChart {
+      width: 10vw;
+      height: 10vh;
+      border: 1px solid #000;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="myChart"></canvas>
+
+  <script>
+    // Inputs
+    const startAmount = 100000; // Starting account amount
+    const annualSpending = 10000; // Annual spending level
+    const inflationRate = 0.02; // Annual inflation rate
+
+    // S&P 500 data (approx)
+    const avgAnnualReturn = 0.07; // Average annual return
+    const volatility = 0.15; // Volatility
+    const numYears = 10;
+    const numSimulations = 500;
+
+    // Function to generate normally distributed random numbers (Box-Muller transform)
+    function randomNormal() {
+      let u = 0, v = 0;
+      while (u === 0) u = Math.random(); // Convert [0,1) to (0,1)
+      while (v === 0) v = Math.random();
+      return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    }
+
+    function simulatePortfolio(startAmount, annualSpending, inflationRate, avgReturn, volatility, numYears) {
+      let portfolioValues = [];
+      let currentAmount = startAmount;
+
+      for (let year = 0; year < numYears; year++) {
+        // Approximate annual return using log-normal distribution
+        let annualReturn = Math.exp(avgReturn - (volatility ** 2) / 2 + volatility * randomNormal()) - 1;
+        currentAmount = currentAmount * (1 + annualReturn) - annualSpending * Math.pow(1 + inflationRate, year);
+        portfolioValues.push(currentAmount);
+      }
+
+      return portfolioValues;
+    }
+
+    // Initialize chart
+    const ctx = document.getElementById('myChart').getContext('2d');
+    const chartData = {
+      labels: Array.from({ length: numYears }, (_, i) => i + 1),
+      datasets: []
+    };
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: chartData,
+      options: {
+        responsive: true,
+        animation: {
+          duration: 2000, // Animation duration for each dataset
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+        },
+      },
+    });
+
+    // Function to run simulations and update the chart
+    function runSimulations() {
+      let allSimulations = [];
+      for (let i = 0; i < numSimulations; i++) {
+        allSimulations.push(simulatePortfolio(startAmount, annualSpending, inflationRate, avgAnnualReturn, volatility, numYears));
+      }
+
+      // Add simulations to the chart gradually
+      allSimulations.forEach((simulation, index) => {
+        setTimeout(() => {
+          chart.data.datasets.push({
+            label: `Simulation ${index + 1}`,
+            data: simulation,
+            borderColor: `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, 0.5)`,
+            fill: false,
+          });
+          chart.update();
+        }, index * 2); // Delay of 100ms between adding each simulation
+      });
+    }
+
+    // Auto-run simulations on page load
+    window.onload = runSimulations;
+  </script>
+</body>
+</html>
